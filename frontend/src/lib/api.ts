@@ -1,15 +1,26 @@
 import { NextResponse } from 'next/server';
 
+function bigIntReplacer(_key: string, value: unknown) {
+  return typeof value === 'bigint' ? value.toString() : value;
+}
+
+function jsonResponse(body: unknown, status: number) {
+  return new NextResponse(JSON.stringify(body, bigIntReplacer), {
+    status,
+    headers: { 'content-type': 'application/json' },
+  });
+}
+
 export function ok<T>(data: T, message = 'Success') {
-  return NextResponse.json({ success: true, message, data });
+  return jsonResponse({ success: true, message, data }, 200);
 }
 
 export function created<T>(data: T, message = 'Created') {
-  return NextResponse.json({ success: true, message, data }, { status: 201 });
+  return jsonResponse({ success: true, message, data }, 201);
 }
 
 export function fail(message: string, status = 400) {
-  return NextResponse.json({ success: false, message, data: null }, { status });
+  return jsonResponse({ success: false, message, data: null }, status);
 }
 
 export function unauthorized(message = 'Unauthorized') {
