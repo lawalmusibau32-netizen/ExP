@@ -28,5 +28,6 @@
     "@types/bcryptjs": "^2.4.6",
     "@types/jsonwebtoken": "^9.0.9",
     "prisma": "^6.6.0"
-  }
+  },
+  "allowScripts": {}
 }
