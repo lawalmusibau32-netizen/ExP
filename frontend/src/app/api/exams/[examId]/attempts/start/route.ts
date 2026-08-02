@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { getAuthUser, hasRole } from '@/lib/auth';
 import { ok, fail, unauthorized, forbidden, notFound } from '@/lib/api';
@@ -70,7 +71,7 @@ export async function POST(request: NextRequest, { params }: Params) {
       studentId,
       attemptNumber: priorAttempts + 1,
       questionOrder: questionOrder,
-      choiceOrder: Object.keys(choiceOrder).length ? choiceOrder : null,
+      choiceOrder: Object.keys(choiceOrder).length ? (choiceOrder as Prisma.InputJsonValue) : Prisma.JsonNull,
       ipAddress,
       userAgent,
     },

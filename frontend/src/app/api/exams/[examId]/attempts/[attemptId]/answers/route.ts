@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getAuthUser } from '@/lib/auth';
+import { getAuthUser, hasRole } from '@/lib/auth';
 import { ok, fail, unauthorized, forbidden, notFound } from '@/lib/api';
 
 type Params = { params: Promise<{ examId: string; attemptId: string }> };
