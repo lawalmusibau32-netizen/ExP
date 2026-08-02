@@ -74,7 +74,7 @@ export default function LoginPage() {
         </form>
 
         <p className="mt-6 text-center text-xs text-zinc-400">
-          Demo accounts: admin@exams.local / lecturer@exams.local / student@exams.local
+          Demo accounts: admin@exams.local / lecturer1@exams.local / student1@exams.local
         </p>
       </div>
     </div>
