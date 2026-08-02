@@ -16,6 +16,7 @@ export function UsersPage() {
   const [success, setSuccess] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<User | null>(null);
+  const [loginId, setLoginId] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
@@ -48,6 +49,7 @@ export function UsersPage() {
 
   const openCreate = () => {
     setEditing(null);
+    setLoginId('');
     setFirstName('');
     setLastName('');
     setEmail('');
@@ -59,6 +61,7 @@ export function UsersPage() {
 
   const openEdit = (u: User) => {
     setEditing(u);
+    setLoginId(u.loginId ?? '');
     setFirstName(u.firstName);
     setLastName(u.lastName);
     setEmail(u.email);
@@ -80,6 +83,7 @@ export function UsersPage() {
         role,
         departmentId: departmentId || null,
       };
+      if (loginId.trim()) payload.loginId = loginId.trim();
       if (!editing) {
         if (!password) {
           setError('Password is required for new users');
@@ -155,6 +159,7 @@ export function UsersPage() {
                 <thead>
                   <tr className="border-b border-zinc-200 text-xs uppercase tracking-wide text-zinc-400">
                     <th className="pb-3 pr-4 font-medium">Name</th>
+                    <th className="pb-3 pr-4 font-medium">ID</th>
                     <th className="pb-3 pr-4 font-medium">Email</th>
                     <th className="pb-3 pr-4 font-medium">Role</th>
                     <th className="pb-3 pr-4 font-medium">Department</th>
@@ -167,6 +172,7 @@ export function UsersPage() {
                   {filtered.map((u) => (
                     <tr key={u.id} className="border-b border-zinc-100 last:border-0">
                       <td className="py-3 pr-4 font-medium text-zinc-900">{u.fullName}</td>
+                      <td className="py-3 pr-4 text-xs text-zinc-500">{u.loginId ?? '-'}</td>
                       <td className="py-3 pr-4 text-zinc-500">{u.email}</td>
                       <td className="py-3 pr-4">
                         <Badge label={ROLE_LABELS[u.role]} className="bg-indigo-50 text-indigo-700 border-indigo-200" />
@@ -208,6 +214,17 @@ export function UsersPage() {
               <Label>Last name *</Label>
               <Input required value={lastName} onChange={(e) => setLastName(e.target.value)} />
             </div>
+          </div>
+          <div>
+            <Label>Student / Staff ID {editing ? '' : '(optional)'}</Label>
+            <Input
+              value={loginId}
+              onChange={(e) => setLoginId(e.target.value)}
+              placeholder="Leave blank to auto-generate"
+            />
+            <p className="mt-1 text-xs text-zinc-400">
+              Auto-generated as ADMIN-### / LEC-### / STU-### if left blank.
+            </p>
           </div>
           <div>
             <Label>Email *</Label>

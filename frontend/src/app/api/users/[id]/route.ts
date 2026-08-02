@@ -13,6 +13,7 @@ function toDTO(user: any) {
   return {
     id: user.id,
     email: user.email,
+    loginId: user.loginId,
     firstName: user.firstName,
     lastName: user.lastName,
     fullName: `${user.firstName} ${user.lastName}`,
@@ -57,6 +58,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
     departmentId?: string | number | null;
     isActive?: boolean;
     password?: string;
+    loginId?: string | null;
   };
   try {
     body = await request.json();
@@ -69,10 +71,20 @@ export async function PUT(request: NextRequest, { params }: Params) {
     if (dup) return fail('User with that email already exists', 409);
   }
 
+  let loginId: string | null | undefined = undefined;
+  if (body.loginId !== undefined) {
+    loginId = body.loginId ? String(body.loginId).trim().toUpperCase() : null;
+    if (loginId && loginId !== existing.loginId) {
+      const dup = await prisma.user.findUnique({ where: { loginId } });
+      if (dup) return fail('User with that ID already exists', 409);
+    }
+  }
+
   const updated = await prisma.user.update({
     where: { id: BigInt(id) },
     data: {
       email: body.email ? body.email.toLowerCase() : existing.email,
+      loginId: loginId === undefined ? existing.loginId : loginId,
       firstName: body.firstName ?? existing.firstName,
       lastName: body.lastName ?? existing.lastName,
       role: (body.role as any) ?? existing.role,

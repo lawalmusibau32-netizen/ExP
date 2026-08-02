@@ -11,6 +11,7 @@ function toDTO(user: any) {
   return {
     id: user.id,
     email: user.email,
+    loginId: user.loginId,
     firstName: user.firstName,
     lastName: user.lastName,
     fullName: `${user.firstName} ${user.lastName}`,
@@ -21,6 +22,27 @@ function toDTO(user: any) {
     lastLoginAt: user.lastLoginAt,
     createdAt: user.createdAt,
   };
+}
+
+const LOGIN_ID_PREFIX: Record<'ADMIN' | 'LECTURER' | 'STUDENT', string> = {
+  ADMIN: 'ADMIN-',
+  LECTURER: 'LEC-',
+  STUDENT: 'STU-',
+};
+
+async function generateLoginId(role: 'ADMIN' | 'LECTURER' | 'STUDENT') {
+  const prefix = LOGIN_ID_PREFIX[role];
+  const existing = await prisma.user.findMany({
+    where: { loginId: { startsWith: prefix } },
+    select: { loginId: true },
+  });
+  let max = 0;
+  for (const u of existing) {
+    if (!u.loginId) continue;
+    const n = parseInt(u.loginId.slice(prefix.length), 10);
+    if (!Number.isNaN(n) && n > max) max = n;
+  }
+  return `${prefix}${String(max + 1).padStart(3, '0')}`;
 }
 
 export async function GET(request: NextRequest) {
@@ -48,6 +70,7 @@ export async function POST(request: NextRequest) {
     role?: 'ADMIN' | 'LECTURER' | 'STUDENT';
     departmentId?: string | number;
     password?: string;
+    loginId?: string | null;
   };
   try {
     body = await request.json();
@@ -66,9 +89,17 @@ export async function POST(request: NextRequest) {
   const existing = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
   if (existing) return fail('User with that email already exists', 409);
 
+  const requestedId = body.loginId ? String(body.loginId).trim().toUpperCase() : null;
+  if (requestedId) {
+    const idDup = await prisma.user.findUnique({ where: { loginId: requestedId } });
+    if (idDup) return fail('User with that ID already exists', 409);
+  }
+  const loginId = requestedId ?? (await generateLoginId(role));
+
   const userRecord = await prisma.user.create({
     data: {
       email: email.toLowerCase(),
+      loginId,
       firstName,
       lastName,
       role,

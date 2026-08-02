@@ -63,6 +63,7 @@ export interface Course {
 export interface User {
   id: string;
   email: string;
+  loginId: string | null;
   firstName: string;
   lastName: string;
   fullName: string;

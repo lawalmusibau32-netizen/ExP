@@ -185,7 +185,7 @@ function LoginForm() {
           </div>
 
           <form onSubmit={onSubmit} className="mt-5 space-y-4">
-            <FloatingInput label="Student / Staff ID" icon="users" value={identifier} onChange={setIdentifier} autoComplete="username" placeholder="e.g. STU-001" />
+            <FloatingInput label="Student / Staff ID" icon="users" value={identifier} onChange={setIdentifier} autoComplete="username" placeholder="e.g. 12345" />
             <FloatingInput label="Email" icon="search" value={email} onChange={setEmail} autoComplete="email" placeholder="you@example.com" type="email" />
 
             <div className="relative">
