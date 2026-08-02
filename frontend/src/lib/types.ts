@@ -9,6 +9,7 @@ export interface ApiResponse<T> {
 export interface LoginUser {
   id: string;
   email: string;
+  loginId: string | null;
   firstName: string;
   lastName: string;
   role: Role;
@@ -19,6 +20,23 @@ export interface LoginUser {
 export interface LoginData {
   token: string;
   user: LoginUser;
+}
+
+export interface LoginAttempt {
+  id: string;
+  userEmail: string | null;
+  userLoginId: string | null;
+  userName: string | null;
+  userRole: Role | null;
+  loginSuccessful: boolean;
+  failureReason: string | null;
+  ipAddress: string | null;
+  userAgent: string | null;
+  loggedAt: string;
+}
+
+export interface LoginAttemptsData extends Paged<LoginAttempt> {
+  stats: { successToday: number; failedToday: number; lockedNow: number };
 }
 
 export interface Department {

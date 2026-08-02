@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
+import { Logo } from '@/components/logo';
 import type { Role } from '@/lib/types';
 
 const LINKS: Record<Role, { href: string; label: string }[]> = {
@@ -11,6 +12,7 @@ const LINKS: Record<Role, { href: string; label: string }[]> = {
     { href: '/admin/departments', label: 'Departments' },
     { href: '/admin/courses', label: 'Courses' },
     { href: '/admin/users', label: 'Users' },
+    { href: '/admin/login-attempts', label: 'Login Attempts' },
     { href: '/admin/question-banks', label: 'Question Banks' },
     { href: '/admin/questions', label: 'Questions' },
     { href: '/admin/exams', label: 'Exams' },
@@ -41,8 +43,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <header className="sticky top-0 z-40 border-b border-zinc-200 bg-white">
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-4">
           <Link href={`/${user.role.toLowerCase()}`} className="flex items-center gap-2 text-base font-bold text-zinc-900">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-sm font-bold text-white">E</span>
-            Exam Platform
+            <Logo />
+            Exam<span className="text-indigo-600">Platform</span>
           </Link>
           <nav className="hidden items-center gap-1 md:flex">
             {links.map((l) => (
@@ -69,7 +71,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <button
               onClick={() => {
                 logout();
-                router.replace('/login');
+                router.replace('/login?loggedOut=1');
               }}
               className="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm font-medium text-zinc-600 hover:bg-zinc-50"
             >

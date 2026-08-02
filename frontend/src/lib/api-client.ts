@@ -3,23 +3,44 @@ import type { ApiResponse } from './types';
 const TOKEN_KEY = 'exp_token';
 const USER_KEY = 'exp_user';
 
-export function getToken(): string | null {
-  if (typeof window === 'undefined') return null;
-  return localStorage.getItem(TOKEN_KEY);
+function read(storage: Storage, key: string): string | null {
+  try {
+    return storage.getItem(key);
+  } catch {
+    return null;
+  }
 }
 
-export function setToken(token: string) {
-  localStorage.setItem(TOKEN_KEY, token);
+function write(storage: Storage, key: string, value: string) {
+  try {
+    storage.setItem(key, value);
+  } catch {
+    // storage unavailable (private mode, quota)
+  }
+}
+
+export function getToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  return read(window.localStorage, TOKEN_KEY) ?? read(window.sessionStorage, TOKEN_KEY);
+}
+
+export function setToken(token: string, remember: boolean) {
+  const storage = remember ? window.localStorage : window.sessionStorage;
+  window.localStorage.removeItem(TOKEN_KEY);
+  window.sessionStorage.removeItem(TOKEN_KEY);
+  write(storage, TOKEN_KEY, token);
 }
 
 export function clearAuth() {
-  localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem(USER_KEY);
+  window.localStorage.removeItem(TOKEN_KEY);
+  window.localStorage.removeItem(USER_KEY);
+  window.sessionStorage.removeItem(TOKEN_KEY);
+  window.sessionStorage.removeItem(USER_KEY);
 }
 
 export function getStoredUser<T>(): T | null {
   if (typeof window === 'undefined') return null;
-  const raw = localStorage.getItem(USER_KEY);
+  const raw = read(window.localStorage, USER_KEY) ?? read(window.sessionStorage, USER_KEY);
   if (!raw) return null;
   try {
     return JSON.parse(raw) as T;
@@ -28,8 +49,25 @@ export function getStoredUser<T>(): T | null {
   }
 }
 
-export function setStoredUser<T>(user: T) {
-  localStorage.setItem(USER_KEY, JSON.stringify(user));
+export function setStoredUser<T>(user: T, remember: boolean) {
+  const storage = remember ? window.localStorage : window.sessionStorage;
+  window.localStorage.removeItem(USER_KEY);
+  window.sessionStorage.removeItem(USER_KEY);
+  write(storage, USER_KEY, JSON.stringify(user));
+}
+
+export function getTokenExpiry(token: string): number | null {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return typeof payload.exp === 'number' ? payload.exp * 1000 : null;
+  } catch {
+    return null;
+  }
+}
+
+export function isTokenExpired(token: string): boolean {
+  const exp = getTokenExpiry(token);
+  return exp !== null && Date.now() >= exp;
 }
 
 interface RequestOptions extends Omit<RequestInit, 'body'> {

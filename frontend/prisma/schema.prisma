@@ -69,6 +69,7 @@ model Course {
 model User {
   id           BigInt    @id @default(autoincrement())
   email        String    @unique
+  loginId      String?   @unique @map("login_id")
   firstName    String    @map("first_name")
   lastName     String    @map("last_name")
   role         Role

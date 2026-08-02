@@ -27,6 +27,7 @@ async function main() {
   const admin = await prisma.user.create({
     data: {
       email: 'admin@exams.local',
+      loginId: 'ADMIN-001',
       firstName: 'System',
       lastName: 'Administrator',
       role: 'ADMIN',
@@ -37,6 +38,7 @@ async function main() {
   const lecturer1 = await prisma.user.create({
     data: {
       email: 'lecturer1@exams.local',
+      loginId: 'LEC-001',
       firstName: 'John',
       lastName: 'Okafor',
       role: 'LECTURER',
@@ -47,6 +49,7 @@ async function main() {
   const lecturer2 = await prisma.user.create({
     data: {
       email: 'lecturer2@exams.local',
+      loginId: 'LEC-002',
       firstName: 'Chioma',
       lastName: 'Adebayo',
       role: 'LECTURER',
@@ -57,6 +60,7 @@ async function main() {
   const student1 = await prisma.user.create({
     data: {
       email: 'student1@exams.local',
+      loginId: 'STU-001',
       firstName: 'Emeka',
       lastName: 'Nwachukwu',
       role: 'STUDENT',
@@ -67,6 +71,7 @@ async function main() {
   const student2 = await prisma.user.create({
     data: {
       email: 'student2@exams.local',
+      loginId: 'STU-002',
       firstName: 'Amina',
       lastName: 'Yusuf',
       role: 'STUDENT',
@@ -77,6 +82,7 @@ async function main() {
   const student3 = await prisma.user.create({
     data: {
       email: 'student3@exams.local',
+      loginId: 'STU-003',
       firstName: 'Tunde',
       lastName: 'Balogun',
       role: 'STUDENT',

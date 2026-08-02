@@ -7,20 +7,20 @@ import { Spinner } from './ui';
 import type { Role } from '@/lib/types';
 
 export function RequireAuth({ roles, children }: { roles?: Role[]; children: ReactNode }) {
-  const { user, loading } = useAuth();
+  const { user, loading, sessionExpired } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     if (loading) return;
     if (!user) {
-      router.replace('/login');
+      router.replace(sessionExpired ? '/login?expired=1' : '/login');
       return;
     }
     if (roles && !roles.includes(user.role)) {
       const base = user.role === 'STUDENT' ? '/student' : user.role === 'LECTURER' ? '/lecturer' : '/admin';
       router.replace(base);
     }
-  }, [loading, user, roles, router]);
+  }, [loading, user, roles, router, sessionExpired]);
 
   if (loading || !user) {
     return (

@@ -13,8 +13,8 @@ export interface JwtPayload {
   lastName: string;
 }
 
-export function signToken(payload: JwtPayload): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+export function signToken(payload: JwtPayload, expiresIn?: SignOptions['expiresIn']): string {
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: expiresIn ?? JWT_EXPIRES_IN });
 }
 
 export function verifyToken(token: string): JwtPayload {
