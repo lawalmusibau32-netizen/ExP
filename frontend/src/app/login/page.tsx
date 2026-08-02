@@ -242,14 +242,6 @@ function LoginForm() {
               administrators.
             </span>
           </div>
-
-          <p className="mt-6 text-center text-xs leading-relaxed text-zinc-400 dark:text-zinc-500">
-            Demo — ID / email · password:
-            <br />
-            <span className="font-semibold text-zinc-500 dark:text-zinc-400">STU-001</span> (student1@exams.local) · Student@123 &nbsp;·&nbsp;
-            <span className="font-semibold text-zinc-500 dark:text-zinc-400">LEC-001</span> (lecturer1@exams.local) · Lecturer@123 &nbsp;·&nbsp;
-            <span className="font-semibold text-zinc-500 dark:text-zinc-400">ADMIN-001</span> (admin@exams.local) · Admin@123
-          </p>
         </div>
       </div>
     </div>
