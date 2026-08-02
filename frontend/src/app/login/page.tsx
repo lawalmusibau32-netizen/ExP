@@ -6,6 +6,56 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { Button, ErrorBanner, Input, Label, SuccessBanner } from '@/components/ui';
 import { Logo } from '@/components/logo';
+import { AnimatedCounter, Icon } from '@/components/design-system';
+
+function FloatingInput({
+  label,
+  icon,
+  type = 'text',
+  value,
+  onChange,
+  autoComplete,
+  placeholder,
+}: {
+  label: string;
+  icon: string;
+  type?: string;
+  value: string;
+  onChange: (v: string) => void;
+  autoComplete?: string;
+  placeholder?: string;
+}) {
+  const [focused, setFocused] = useState(false);
+  const floated = focused || value.length > 0;
+  return (
+    <div className="relative">
+      <div className="pointer-events-none absolute inset-y-0 left-3.5 flex items-center text-zinc-400">
+        <Icon name={icon} className="h-5 w-5" />
+      </div>
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        autoComplete={autoComplete}
+        placeholder={floated ? placeholder : ''}
+        className={`w-full rounded-xl border bg-white px-11 pb-2.5 pt-5 text-sm text-zinc-900 outline-none transition-all duration-200 dark:bg-navy-800 dark:text-white ${
+          focused
+            ? 'border-brand-500 ring-4 ring-brand-500/15 dark:border-brand-400'
+            : 'border-zinc-300 dark:border-brand-500/25'
+        }`}
+      />
+      <label
+        className={`pointer-events-none absolute left-11 transition-all duration-200 ${
+          floated ? 'top-1.5 text-[10px] font-bold uppercase tracking-wide text-brand-500' : 'top-3.5 text-sm text-zinc-400'
+        }`}
+      >
+        {label}
+      </label>
+    </div>
+  );
+}
 
 function LoginForm() {
   const { login, user } = useAuth();
@@ -21,7 +71,6 @@ function LoginForm() {
 
   const expired = searchParams.get('expired') === '1';
   const loggedOut = searchParams.get('loggedOut') === '1';
-
   const isLockout = error !== null && /locked|too many/i.test(error);
 
   const goHome = () => {
@@ -48,128 +97,160 @@ function LoginForm() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 px-4 py-8">
-      <div className="w-full max-w-md">
-        <div className="rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
-          <div className="mb-6 text-center">
-            <div className="mx-auto mb-3 w-fit">
-              <Logo size="lg" />
+    <div className="flex min-h-screen bg-zinc-50 dark:bg-navy-950">
+      {/* Left panel — welcome + illustration */}
+      <div className="grad-bg relative hidden w-1/2 flex-col justify-between overflow-hidden p-12 lg:flex">
+        <div className="absolute -right-24 -top-24 h-96 w-96 rounded-full bg-brand-500/30 blur-3xl" />
+        <div className="absolute -bottom-32 -left-16 h-96 w-96 rounded-full bg-cyan-400/20 blur-3xl" />
+        <div className="absolute right-24 top-1/3 h-40 w-40 rounded-full bg-brand-400/20 blur-2xl animate-float" />
+
+        <div className="relative z-10 flex items-center gap-3">
+          <Logo size="lg" />
+          <span className="text-xl font-extrabold tracking-tight text-white">
+            Exam<span className="text-cyan-300">Platform</span>
+          </span>
+        </div>
+
+        <div className="relative z-10">
+          <h1 className="animate-fade-up text-4xl font-extrabold leading-tight text-white xl:text-5xl">
+            Secure online exams,
+            <br />
+            <span className="grad-text">without the stress.</span>
+          </h1>
+          <p className="animate-fade-up mt-4 max-w-md text-lg text-indigo-200" style={{ animationDelay: '0.1s' }}>
+            A modern examination platform for universities and professional institutions — built for students,
+            lecturers, and administrators.
+          </p>
+
+          <div className="mt-8 space-y-3">
+            {[
+              { icon: 'shield', text: 'Monitored sessions with tab-switch detection' },
+              { icon: 'clock', text: 'Real-time countdown and auto-submission' },
+              { icon: 'chartBar', text: 'Instant scoring and detailed analytics' },
+            ].map((f, i) => (
+              <div key={i} className="animate-fade-up flex items-center gap-3 text-sm text-indigo-100" style={{ animationDelay: `${0.2 + i * 0.1}s` }}>
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 text-cyan-300 backdrop-blur-sm">
+                  <Icon name={f.icon} className="h-4.5 w-4.5" />
+                </span>
+                {f.text}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="relative z-10 flex gap-10">
+          {[
+            { value: 100, suffix: '%', label: 'Cheat-safe' },
+            { value: 24, suffix: '/7', label: 'Availability' },
+            { value: 3, suffix: '+', label: 'Question types' },
+          ].map((s, i) => (
+            <div key={i}>
+              <div className="text-2xl font-extrabold text-white">
+                <AnimatedCounter value={s.value} suffix={s.suffix} />
+              </div>
+              <div className="text-xs uppercase tracking-wide text-indigo-300">{s.label}</div>
             </div>
-            <h1 className="text-xl font-bold text-zinc-900">Exam Platform</h1>
-            <p className="mt-1 text-sm text-zinc-500">Sign in with your Student/Staff ID or email</p>
+          ))}
+        </div>
+      </div>
+
+      {/* Right panel — form */}
+      <div className="flex w-full items-center justify-center px-4 py-10 lg:w-1/2">
+        <div className="animate-fade-up w-full max-w-md">
+          <div className="mb-8 flex flex-col items-center lg:hidden">
+            <Logo size="lg" />
+            <h1 className="mt-3 text-xl font-extrabold text-zinc-900 dark:text-white">
+              Exam<span className="grad-text">Platform</span>
+            </h1>
           </div>
 
-          {expired && <SuccessBanner message="Your session has expired. Please sign in again to continue." />}
-          {loggedOut && <SuccessBanner message="You have been signed out successfully." />}
+          <h2 className="text-2xl font-extrabold tracking-tight text-zinc-900 dark:text-white">Welcome back</h2>
+          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">Sign in with your Student/Staff ID or email</p>
 
-          {error &&
-            (isLockout ? (
-              <div className="mb-4 flex items-start gap-2.5 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                <svg className="mt-0.5 h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
-                </svg>
-                <div>
-                  <p className="font-semibold">Account temporarily locked</p>
-                  <p className="mt-0.5 text-amber-700">{error}</p>
+          <div className="mt-5 space-y-3">
+            {expired && <SuccessBanner message="Your session has expired. Please sign in again to continue." />}
+            {loggedOut && <SuccessBanner message="You have been signed out successfully." />}
+            {error &&
+              (isLockout ? (
+                <div className="animate-fade-up flex items-start gap-2.5 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-300">
+                  <Icon name="clock" className="mt-0.5 h-4 w-4 shrink-0" />
+                  <div>
+                    <p className="font-bold">Account temporarily locked</p>
+                    <p className="mt-0.5 text-amber-700 dark:text-amber-300/90">{error}</p>
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <ErrorBanner message={error} />
-            ))}
+              ) : (
+                <ErrorBanner message={error} />
+              ))}
+          </div>
 
-          <form onSubmit={onSubmit} className="mt-4 space-y-4">
-            <div>
-              <Label>Student / Staff ID</Label>
-              <Input
-                type="text"
-                autoComplete="username"
-                placeholder="e.g. STU-001"
-                value={identifier}
-                onChange={(e) => setIdentifier(e.target.value)}
+          <form onSubmit={onSubmit} className="mt-5 space-y-4">
+            <FloatingInput label="Student / Staff ID" icon="users" value={identifier} onChange={setIdentifier} autoComplete="username" placeholder="e.g. STU-001" />
+            <FloatingInput label="Email" icon="search" value={email} onChange={setEmail} autoComplete="email" placeholder="you@example.com" type="email" />
+
+            <div className="relative">
+              <FloatingInput
+                label="Password"
+                icon="shield"
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={setPassword}
+                autoComplete="current-password"
+                placeholder="••••••••"
               />
-            </div>
-            <div>
-              <Label>
-                Email <span className="font-normal text-zinc-400">(or use ID above)</span>
-              </Label>
-              <Input
-                type="email"
-                autoComplete="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </div>
-            <div>
-              <Label>Password</Label>
-              <div className="relative">
-                <Input
-                  type={showPassword ? 'text' : 'password'}
-                  required
-                  autoComplete="current-password"
-                  placeholder="••••••••"
-                  className="pr-11"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((v) => !v)}
-                  className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-zinc-400 hover:text-zinc-600"
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
-                >
-                  {showPassword ? (
-                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />
-                    </svg>
-                  ) : (
-                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
-                    </svg>
-                  )}
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-zinc-400 transition-colors hover:text-brand-500"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                <Icon name={showPassword ? 'eyeOff' : 'eye'} className="h-5 w-5" />
+              </button>
             </div>
 
-            <div className="flex items-center justify-between">
-              <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-600">
+            <div className="flex items-center justify-between text-sm">
+              <label className="flex cursor-pointer items-center gap-2 text-zinc-600 dark:text-zinc-300">
                 <input
                   type="checkbox"
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
-                  className="h-4 w-4 rounded border-zinc-300 accent-indigo-600"
+                  className="h-4 w-4 rounded accent-brand-600"
                 />
                 Remember me
               </label>
-              <Link href="/forgot-password" className="text-sm font-medium text-indigo-600 hover:underline">
+              <Link href="/forgot-password" className="font-semibold text-brand-600 hover:underline dark:text-brand-300">
                 Forgot password?
               </Link>
             </div>
 
-            <Button type="submit" disabled={busy} className="w-full py-2.5">
-              {busy ? 'Signing in...' : 'Sign in'}
+            <Button type="submit" disabled={busy} className="btn-glow w-full py-3 text-base">
+              {busy ? (
+                <span className="flex items-center gap-2">
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                  Signing in…
+                </span>
+              ) : (
+                'Sign in'
+              )}
             </Button>
           </form>
 
-          <div className="mt-6 flex items-start gap-2 rounded-lg bg-zinc-50 px-3.5 py-2.5 text-xs text-zinc-500">
-            <svg className="mt-0.5 h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
-            </svg>
+          <div className="mt-6 flex items-start gap-2.5 rounded-xl border border-zinc-200 bg-white/60 px-4 py-3 text-xs text-zinc-500 backdrop-blur dark:border-brand-500/20 dark:bg-navy-800/60 dark:text-zinc-400">
+            <Icon name="shield" className="mt-0.5 h-4 w-4 shrink-0 text-brand-500" />
             <span>
               Protected area. Unauthorized access is prohibited. All login attempts are logged and monitored by
               administrators.
             </span>
           </div>
-        </div>
 
-        <p className="mt-5 text-center text-xs text-zinc-400">
-          Demo: <span className="font-medium text-zinc-500">STU-001</span> (or student1@exams.local) /{' '}
-          <span className="font-medium text-zinc-500">LEC-001</span> (lecturer1@exams.local) /{' '}
-          <span className="font-medium text-zinc-500">ADMIN-001</span> (admin@exams.local) · passwords{' '}
-          <span className="font-medium text-zinc-500">Student@123</span> / <span className="font-medium text-zinc-500">Lecturer@123</span> /{' '}
-          <span className="font-medium text-zinc-500">Admin@123</span>
-        </p>
+          <p className="mt-6 text-center text-xs leading-relaxed text-zinc-400 dark:text-zinc-500">
+            Demo — ID / email · password:
+            <br />
+            <span className="font-semibold text-zinc-500 dark:text-zinc-400">STU-001</span> (student1@exams.local) · Student@123 &nbsp;·&nbsp;
+            <span className="font-semibold text-zinc-500 dark:text-zinc-400">LEC-001</span> (lecturer1@exams.local) · Lecturer@123 &nbsp;·&nbsp;
+            <span className="font-semibold text-zinc-500 dark:text-zinc-400">ADMIN-001</span> (admin@exams.local) · Admin@123
+          </p>
+        </div>
       </div>
     </div>
   );
