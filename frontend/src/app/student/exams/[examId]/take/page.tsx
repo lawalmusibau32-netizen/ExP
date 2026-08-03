@@ -39,6 +39,7 @@ export default function TakeExamPage({ params }: { params: Promise<{ examId: str
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const tabSwitchInFlight = useRef(false);
   const submittedRef = useRef(false);
+  const pageReadyAt = useRef(0);
 
   const setAnswersBoth = useCallback((next: Record<string, AnswerState>) => {
     answersRef.current = next;
@@ -92,6 +93,7 @@ export default function TakeExamPage({ params }: { params: Promise<{ examId: str
         attemptRef.current = data;
         setAttempt(data);
         setStarted(true);
+        pageReadyAt.current = Date.now();
         const init: Record<string, AnswerState> = {};
         data.answers.forEach((a) => {
           init[a.questionId] = {
@@ -124,6 +126,7 @@ export default function TakeExamPage({ params }: { params: Promise<{ examId: str
   const reportTabSwitch = useCallback(async () => {
     const a = attemptRef.current;
     if (!a || submittedRef.current || tabSwitchInFlight.current) return;
+    if (Date.now() - pageReadyAt.current < 3000) return;
     tabSwitchInFlight.current = true;
     try {
       const res = await api.post<{ autoSubmitted: boolean; status: string }>(`/api/exams/${a.examId}/attempts/${a.id}/tab-switch`);
@@ -144,12 +147,9 @@ export default function TakeExamPage({ params }: { params: Promise<{ examId: str
     const onVisibility = () => {
       if (document.visibilityState === 'hidden') reportTabSwitch();
     };
-    const onBlur = () => reportTabSwitch();
     document.addEventListener('visibilitychange', onVisibility);
-    window.addEventListener('blur', onBlur);
     return () => {
       document.removeEventListener('visibilitychange', onVisibility);
-      window.removeEventListener('blur', onBlur);
     };
   }, [reportTabSwitch]);
 
