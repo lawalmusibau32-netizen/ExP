@@ -3,7 +3,7 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { getAuthUser, hasRole } from '@/lib/auth';
 import { ok, fail, unauthorized, forbidden, notFound } from '@/lib/api';
-import { ATTEMPT_INCLUDE, shuffle, buildAttemptDTO } from '@/lib/attempts';
+import { ATTEMPT_INCLUDE, shuffle, buildAttemptDTO, autoGrade, recalculateResult } from '@/lib/attempts';
 
 type Params = { params: Promise<{ examId: string }> };
 
@@ -36,6 +36,35 @@ export async function POST(request: NextRequest, { params }: Params) {
 
   const studentId = BigInt(user.sub);
   const maxAttempts = exam.maxAttempts ?? 1;
+
+  const inProgress = await prisma.examAttempt.findFirst({
+    where: { examId: BigInt(examId), studentId, status: 'IN_PROGRESS' },
+    include: ATTEMPT_INCLUDE,
+    orderBy: { startedAt: 'desc' },
+  });
+
+  if (inProgress) {
+    const attemptDeadline = new Date(
+      Math.min(
+        new Date(inProgress.startedAt).getTime() + exam.durationMinutes * 60000,
+        exam.endTime.getTime()
+      )
+    );
+
+    if (now < attemptDeadline) {
+      return ok(buildAttemptDTO(inProgress, { role: user.role, sub: user.sub }), 'Attempt resumed');
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.examAttempt.update({
+        where: { id: inProgress.id },
+        data: { status: 'AUTO_SUBMITTED', submittedAt: now },
+      });
+      await autoGrade(inProgress.id, tx);
+      await recalculateResult(inProgress.id, tx);
+    });
+  }
+
   const priorAttempts = await prisma.examAttempt.count({
     where: { examId: BigInt(examId), studentId },
   });
@@ -70,7 +99,7 @@ export async function POST(request: NextRequest, { params }: Params) {
       examId: BigInt(examId),
       studentId,
       attemptNumber: priorAttempts + 1,
-      questionOrder: questionOrder,
+      questionOrder,
       choiceOrder: Object.keys(choiceOrder).length ? (choiceOrder as Prisma.InputJsonValue) : Prisma.JsonNull,
       ipAddress,
       userAgent,
