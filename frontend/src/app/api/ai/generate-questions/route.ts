@@ -12,7 +12,7 @@ const GeneratedQuestion = z.object({
   content: z.string().min(1),
   questionType: QuestionType,
   points: z.number().int().min(1).max(20).default(1),
-  choices: z.array(z.string().min(1)).length(2).max(6).optional(),
+  choices: z.array(z.string().min(1)).min(2).max(6).optional(),
   correctAnswer: z.string().min(1),
   explanation: z.string().optional(),
 });
