@@ -63,6 +63,53 @@ export async function GET(request: NextRequest, { params }: Params) {
   });
 }
 
+export async function PATCH(request: NextRequest, { params }: Params) {
+  const user = getAuthUser(request);
+  if (!user) return unauthorized();
+  if (!hasRole(user, ['ADMIN', 'LECTURER'])) return forbidden();
+
+  const { id } = await params;
+  const exam = await prisma.exam.findUnique({ where: { id: BigInt(id) } });
+  if (!exam) return notFound('Exam not found');
+
+  let body: {
+    title?: string;
+    description?: string;
+    durationMinutes?: number;
+    passingScore?: number;
+    maxAttempts?: number;
+    maxTabSwitches?: number | null;
+    shuffleQuestions?: boolean;
+    shuffleChoices?: boolean;
+    showResultsImmediately?: boolean;
+    startTime?: string;
+    endTime?: string;
+  };
+  try {
+    body = await request.json();
+  } catch {
+    return fail('Invalid request body');
+  }
+
+  const data: Record<string, unknown> = {};
+  if (body.title !== undefined) data.title = body.title;
+  if (body.description !== undefined) data.description = body.description;
+  if (body.durationMinutes !== undefined) data.durationMinutes = Math.max(1, body.durationMinutes);
+  if (body.passingScore !== undefined) data.passingScore = Math.max(0, Math.min(100, body.passingScore));
+  if (body.maxAttempts !== undefined) data.maxAttempts = Math.max(1, body.maxAttempts);
+  if (body.maxTabSwitches !== undefined) data.maxTabSwitches = body.maxTabSwitches;
+  if (body.shuffleQuestions !== undefined) data.shuffleQuestions = body.shuffleQuestions;
+  if (body.shuffleChoices !== undefined) data.shuffleChoices = body.shuffleChoices;
+  if (body.showResultsImmediately !== undefined) data.showResultsImmediately = body.showResultsImmediately;
+  if (body.startTime !== undefined) data.startTime = new Date(body.startTime);
+  if (body.endTime !== undefined) data.endTime = new Date(body.endTime);
+
+  if (Object.keys(data).length === 0) return fail('No fields to update');
+
+  const updated = await prisma.exam.update({ where: { id: BigInt(id) }, data });
+  return ok({ id: updated.id, ...data }, 'Exam updated');
+}
+
 export async function DELETE(request: NextRequest, { params }: Params) {
   const user = getAuthUser(request);
   if (!user) return unauthorized();
