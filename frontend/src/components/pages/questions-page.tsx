@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { api } from '@/lib/api-client';
-import type { GeneratedQuestion, Question, QuestionBank, QuestionType } from '@/lib/types';
+import type { Course, GeneratedQuestion, Question, QuestionBank, QuestionType } from '@/lib/types';
 import { Badge, Button, Card, ConfirmButton, EmptyState, ErrorBanner, Input, Label, Modal, PageHeader, Select, Spinner, SuccessBanner, Textarea, formatDateTime } from '@/components/ui';
 
 const TYPE_LABELS: Record<QuestionType, string> = {
@@ -17,6 +17,7 @@ const ALL_TYPES: QuestionType[] = ['MCQ', 'TRUE_FALSE', 'FILL_BLANK', 'SUBJECTIV
 export function QuestionsPage() {
   const [items, setItems] = useState<Question[]>([]);
   const [banks, setBanks] = useState<QuestionBank[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
   const [bankFilter, setBankFilter] = useState('ALL');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -35,7 +36,10 @@ export function QuestionsPage() {
   const [saving, setSaving] = useState(false);
 
   const [aiOpen, setAiOpen] = useState(false);
+  const [aiBankMode, setAiBankMode] = useState<'new' | 'existing'>('new');
   const [aiBankId, setAiBankId] = useState('');
+  const [aiNewBankTitle, setAiNewBankTitle] = useState('');
+  const [aiNewCourseId, setAiNewCourseId] = useState('');
   const [aiTopic, setAiTopic] = useState('');
   const [aiCount, setAiCount] = useState('5');
   const [aiTypes, setAiTypes] = useState<QuestionType[]>([...ALL_TYPES]);
@@ -50,12 +54,14 @@ export function QuestionsPage() {
   const load = async () => {
     setLoading(true);
     try {
-      const [questions, allBanks] = await Promise.all([
+      const [questions, allBanks, allCourses] = await Promise.all([
         api.get<Question[]>('/api/questions'),
         api.get<QuestionBank[]>('/api/question-banks'),
+        api.get<Course[]>('/api/courses'),
       ]);
       setItems(questions);
       setBanks(allBanks);
+      setCourses(allCourses);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load questions');
     } finally {
@@ -159,7 +165,10 @@ export function QuestionsPage() {
 
   const openAi = () => {
     setAiOpen(true);
+    setAiBankMode('new');
     setAiBankId(banks[0]?.id ?? '');
+    setAiNewBankTitle('');
+    setAiNewCourseId(courses[0]?.id ?? '');
     setAiTopic('');
     setAiCount('5');
     setAiTypes([...ALL_TYPES]);
@@ -189,14 +198,19 @@ export function QuestionsPage() {
     setAiPreview(null);
     setAiEditIndex(null);
     try {
-      const questions = await api.post<GeneratedQuestion[]>('/api/ai/generate-questions', {
+      const payload: Record<string, unknown> = {
         topic: aiTopic.trim(),
-        questionBankId: aiBankId,
         count: Number(aiCount) || 5,
         types: aiTypes,
         difficulty: aiDifficulty,
         extraInstructions: aiExtra.trim() || undefined,
-      });
+      };
+      if (aiBankMode === 'existing') {
+        payload.questionBankId = aiBankId;
+      } else {
+        payload.courseId = aiNewCourseId;
+      }
+      const questions = await api.post<GeneratedQuestion[]>('/api/ai/generate-questions', payload);
       setAiPreview(questions);
     } catch (err) {
       setAiError(err instanceof Error ? err.message : 'Generation failed');
@@ -221,14 +235,25 @@ export function QuestionsPage() {
 
   const saveAiBatch = async () => {
     if (!aiPreview || aiPreview.length === 0) return;
+    if (aiBankMode === 'new' && (!aiNewBankTitle.trim() || !aiNewCourseId)) {
+      setAiError('Bank title and course are required');
+      return;
+    }
     setAiSaving(true);
     setAiError(null);
     try {
-      await api.post('/api/questions/bulk', {
-        questionBankId: aiBankId,
-        questions: aiPreview,
-      });
-      setSuccess(`${aiPreview.length} question(s) generated and saved`);
+      const payload: Record<string, unknown> = { questions: aiPreview };
+      if (aiBankMode === 'existing') {
+        payload.questionBankId = aiBankId;
+      } else {
+        payload.newBank = { title: aiNewBankTitle.trim(), courseId: aiNewCourseId };
+      }
+      await api.post('/api/questions/bulk', payload);
+      setSuccess(
+        aiBankMode === 'new'
+          ? `${aiPreview.length} question(s) saved into new bank "${aiNewBankTitle.trim()}"`
+          : `${aiPreview.length} question(s) generated and saved`
+      );
       setAiOpen(false);
       setAiPreview(null);
       load();
@@ -436,7 +461,53 @@ export function QuestionsPage() {
                 placeholder="e.g. Newton's laws of motion, the Nigerian Civil War, photosynthesis, database normalization..."
               />
             </div>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <Label>Destination</Label>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => setAiBankMode('new')}
+                  className={`rounded-xl border px-3 py-2 text-sm font-semibold transition ${
+                    aiBankMode === 'new'
+                      ? 'border-brand-500 bg-brand-500 text-white'
+                      : 'border-zinc-300 text-zinc-500 hover:border-brand-400'
+                  }`}
+                >
+                  + Create new bank
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAiBankMode('existing')}
+                  className={`rounded-xl border px-3 py-2 text-sm font-semibold transition ${
+                    aiBankMode === 'existing'
+                      ? 'border-brand-500 bg-brand-500 text-white'
+                      : 'border-zinc-300 text-zinc-500 hover:border-brand-400'
+                  }`}
+                >
+                  Use existing bank
+                </button>
+              </div>
+            </div>
+            {aiBankMode === 'new' ? (
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <Label>New bank title *</Label>
+                  <Input
+                    value={aiNewBankTitle}
+                    onChange={(e) => setAiNewBankTitle(e.target.value)}
+                    placeholder="e.g. Newton's Laws — Quiz Set"
+                  />
+                </div>
+                <div>
+                  <Label>Course *</Label>
+                  <Select required value={aiNewCourseId} onChange={(e) => setAiNewCourseId(e.target.value)}>
+                    {courses.map((c) => (
+                      <option key={c.id} value={c.id}>{c.title}</option>
+                    ))}
+                  </Select>
+                </div>
+              </div>
+            ) : (
               <div>
                 <Label>Question bank *</Label>
                 <Select required value={aiBankId} onChange={(e) => setAiBankId(e.target.value)}>
@@ -445,17 +516,17 @@ export function QuestionsPage() {
                   ))}
                 </Select>
               </div>
-              <div>
-                <Label>Number of questions *</Label>
-                <Input
-                  required
-                  type="number"
-                  min={1}
-                  max={20}
-                  value={aiCount}
-                  onChange={(e) => setAiCount(e.target.value)}
-                />
-              </div>
+            )}
+            <div>
+              <Label>Number of questions *</Label>
+              <Input
+                required
+                type="number"
+                min={1}
+                max={20}
+                value={aiCount}
+                onChange={(e) => setAiCount(e.target.value)}
+              />
             </div>
             <div>
               <Label>Question types</Label>

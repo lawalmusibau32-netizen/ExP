@@ -12,6 +12,7 @@ export async function POST(request: NextRequest) {
 
   let body: {
     questionBankId?: string | number;
+    newBank?: { title?: string; courseId?: string | number };
     questions?: Array<{
       content?: string;
       questionType?: string;
@@ -27,17 +28,31 @@ export async function POST(request: NextRequest) {
     return fail('Invalid request body');
   }
 
-  const { questionBankId, questions } = body;
-  if (questionBankId === undefined || !Array.isArray(questions) || questions.length === 0) {
-    return fail('questionBankId and a non-empty questions array are required');
+  const { questionBankId, questions, newBank } = body;
+  if (!Array.isArray(questions) || questions.length === 0) {
+    return fail('A non-empty questions array is required');
   }
   if (questions.length > 50) return fail('Too many questions in one batch (max 50)');
 
-  const bank = await prisma.questionBank.findUnique({ where: { id: BigInt(String(questionBankId)) } });
-  if (!bank) return notFound('Question bank not found');
+  if (questionBankId === undefined && (!newBank?.title || newBank.courseId === undefined)) {
+    return fail('Provide an existing questionBankId or newBank { title, courseId }');
+  }
+  if (questionBankId !== undefined && newBank !== undefined) {
+    return fail('Provide either questionBankId or newBank, not both');
+  }
+
+  const userId = BigInt(user.sub);
+
+  if (questionBankId !== undefined) {
+    const bank = await prisma.questionBank.findUnique({ where: { id: BigInt(String(questionBankId)) } });
+    if (!bank) return notFound('Question bank not found');
+  } else {
+    const course = await prisma.course.findUnique({ where: { id: BigInt(String(newBank!.courseId!)) } });
+    if (!course) return notFound('Course not found');
+  }
 
   const rows = questions.map((q) => ({
-    questionBankId: bank.id,
+    questionBankId: BigInt(String(questionBankId ?? 0)),
     content: String(q.content ?? '').trim(),
     questionType: ALLOWED_TYPES.includes(q.questionType ?? '') ? (q.questionType as any) : 'MCQ',
     points: Math.max(1, Math.min(20, Number(q.points) || 1)),
@@ -51,20 +66,55 @@ export async function POST(request: NextRequest) {
   const valid = rows.filter((r) => r.content);
   if (valid.length === 0) return fail('No valid questions in the batch');
 
-  await prisma.$transaction([
-    prisma.question.createMany({ data: valid }),
+  let bankId: bigint;
+  let bankCreated = false;
+
+  if (questionBankId !== undefined) {
+    bankId = BigInt(String(questionBankId));
+  } else {
+    const createdBank = await prisma.questionBank.create({
+      data: {
+        title: String(newBank!.title).trim(),
+        courseId: BigInt(String(newBank!.courseId!)),
+        createdById: userId,
+      },
+    });
+    bankId = createdBank.id;
+    bankCreated = true;
+    valid.forEach((r) => (r.questionBankId = bankId));
+  }
+
+  const operations: any[] = [];
+  if (bankCreated) {
+    operations.push(
+      prisma.auditLog.create({
+        data: {
+          userId,
+          action: 'QUESTION_BANK_CREATED',
+          resourceType: 'QUESTION_BANK',
+          resourceId: bankId,
+          ipAddress: request.headers.get('x-forwarded-for')?.split(',')[0].trim() || null,
+          userAgent: request.headers.get('user-agent'),
+        },
+      })
+    );
+  }
+  operations.push(prisma.question.createMany({ data: valid }));
+  operations.push(
     prisma.auditLog.create({
       data: {
-        userId: BigInt(user.sub),
+        userId,
         action: 'QUESTIONS_BULK_CREATED',
         resourceType: 'QUESTION_BANK',
-        resourceId: bank.id,
-        details: { count: valid.length },
+        resourceId: bankId,
+        details: { count: valid.length, newBank: bankCreated },
         ipAddress: request.headers.get('x-forwarded-for')?.split(',')[0].trim() || null,
         userAgent: request.headers.get('user-agent'),
       },
-    }),
-  ]);
+    })
+  );
 
-  return ok({ count: valid.length }, `${valid.length} question(s) created`);
+  await prisma.$transaction(operations);
+
+  return ok({ count: valid.length, questionBankId: String(bankId), newBank: bankCreated }, `${valid.length} question(s) created`);
 }

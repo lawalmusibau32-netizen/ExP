@@ -21,7 +21,8 @@ const GeneratedSet = z.object({ questions: z.array(GeneratedQuestion).min(1).max
 
 const requestSchema = z.object({
   topic: z.string().min(3).max(500),
-  questionBankId: z.union([z.string(), z.number()]),
+  questionBankId: z.union([z.string(), z.number()]).optional(),
+  courseId: z.union([z.string(), z.number()]).optional(),
   count: z.number().int().min(1).max(20).default(5),
   types: z.array(QuestionType).min(1).optional(),
   difficulty: z.enum(['Easy', 'Medium', 'Hard']).optional(),
@@ -45,14 +46,22 @@ export async function POST(request: NextRequest) {
     return fail('Topic is required (3+ characters) and count must be between 1 and 20');
   }
 
-  const bank = await prisma.questionBank.findUnique({ where: { id: BigInt(String(body.questionBankId)) } });
-  if (!bank) return fail('Question bank not found', 404);
+  if (body.questionBankId !== undefined) {
+    const bank = await prisma.questionBank.findUnique({ where: { id: BigInt(String(body.questionBankId)) } });
+    if (!bank) return fail('Question bank not found', 404);
+  }
+
+  let courseTitle = '';
+  if (body.courseId !== undefined) {
+    const course = await prisma.course.findUnique({ where: { id: BigInt(String(body.courseId)) } });
+    if (course) courseTitle = course.title;
+  }
 
   const typeMix = body.types?.length
     ? body.types.join(', ')
     : 'MCQ, TRUE_FALSE, FILL_BLANK, SUBJECTIVE (mix, preferring MCQ)';
 
-  const prompt = `You are an expert exam question writer. Generate exactly ${body.count} question(s) about the topic: "${body.topic}".
+  const prompt = `You are an expert exam question writer. Generate exactly ${body.count} question(s) about the topic: "${body.topic}".${courseTitle ? `\n\nThe questions are for the course: ${courseTitle}.` : ''}
 
 Requirements:
 - Difficulty: ${body.difficulty ?? 'Medium'}
