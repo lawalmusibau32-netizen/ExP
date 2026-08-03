@@ -89,6 +89,15 @@ export interface QuestionBank {
   updatedAt: string;
 }
 
+export interface GeneratedQuestion {
+  content: string;
+  questionType: QuestionType;
+  points: number;
+  choices: { options: string[] } | null;
+  correctAnswer: string;
+  explanation: string | null;
+}
+
 export type QuestionType = 'MCQ' | 'TRUE_FALSE' | 'FILL_BLANK' | 'SUBJECTIVE';
 
 export interface Question {
